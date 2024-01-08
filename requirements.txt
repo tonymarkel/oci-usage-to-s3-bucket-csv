@@ -1,0 +1,8 @@
+awscli
+boto3
+botocore
+oci-cli
+python-dateutil
+rsa
+s3transfer
+types-python-dateutil
