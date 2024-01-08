@@ -14,48 +14,7 @@
 #
 # Supports Python 3
 ##########################################################################
-# Application Command line parameters
-#
-#   -c config    - OCI CLI Config File
-#   -t profile   - profile inside the config file
-#   -p proxy     - Set Proxy (i.e. www-proxy-server.com:80)
-#   -ip          - Use Instance Principals for Authentication
-#   -dt          - Use Instance Principals with delegation token for cloud shell
-#   -cd          - Compartment Depth (defaults to 3)
-#   -ds date     - Start Date in YYYY-MM-DD format (defaults to the first day of last month)
-#   -de date     - End Date in YYYY-MM-DD format (defaults to the last day of last month)
-#   -ld days     - Add Days Combined with Start Date (de is ignored if specified)
-#
-##########################################################################
-# Info:
-#    List Tenancy Usage Including Product, Region, and Compartment
-#
-# Connectivity:
-#    Option 1 - User Authentication
-#       $HOME/.oci/config, please follow - https://docs.cloud.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm
-#       OCI user part of ShowUsageGroup group with below Policy rules:
-#          Allow group ShowUsageGroup to inspect tenancies in tenancy
-#          Allow group ShowUsageGroup to read usage-report in tenancy
-#       (optional for AWS Native S3)
-#       $HOME/.aws/config
-#       $HOME/.aws/credentials
-#
-#    Option 2 - Instance Principle
-#       Compute instance part of DynShowUsageGroup dynamic group with policy rules:
-#          Allow dynamic group DynShowUsageGroup to inspect tenancies in tenancy
-#          Allow dynamic group DynShowUsageGroup to read usage-report in tenancy
-#
-##########################################################################
-# Modules Included:
-# - oci.identity.IdentityClient
-# - oci.usage_api.UsageapiClient
-#
-# APIs Used:
-# - IdentityClient.get_tenancy               - Policy TENANCY_INSPECT
-# - IdentityClient.list_region_subscriptions - Policy TENANCY_INSPECT
-# - UsageapiClient.request_summarized_usages - read usage-report
-#
-##########################################################################
+
 import sys
 import argparse
 import datetime
@@ -168,13 +127,14 @@ def usage_daily_product(usageClient, tenant_id, time_usage_started, time_usage_e
     try:
         # oci.usage_api.models.RequestSummarizedUsagesDetails
         requestSummarizedUsagesDetails = oci.usage_api.models.RequestSummarizedUsagesDetails(
-            tenant_id          = tenant_id,
-            granularity        = 'DAILY',
-            query_type         = 'COST',
-            compartment_depth  = tier,
-            group_by           = ['region', 'skuPartNumber', 'skuName', 'compartmentPath'],
-            time_usage_started = time_usage_started.strftime('%Y-%m-%dT%H:%M:%SZ'),
-            time_usage_ended   = time_usage_ended.strftime('%Y-%m-%dT%H:%M:%SZ')
+            tenant_id            = tenant_id,
+            granularity          = 'DAILY',
+            query_type           = 'COST',
+            compartment_depth    = tier,
+            group_by             = ['region', 'skuPartNumber', 'skuName', 'compartmentPath'],
+            time_usage_started   = time_usage_started.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            time_usage_ended     = time_usage_ended.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            is_aggregate_by_time = True
         )
 
         # usageClient.request_summarized_usages
@@ -183,8 +143,8 @@ def usage_daily_product(usageClient, tenant_id, time_usage_started, time_usage_e
             retry_strategy=oci.retry.DEFAULT_RETRY_STRATEGY
         )
         # Header
-        csv_header = "\"Vendor\",\"Region\",\"Tier\",\"Product\",\"Cost\"\n"
-        print(csv_header)
+        csv_header = "\"Vendor\",\"Region\",\"Tier\",\"Product\",\"Day\",\"Cost\"\n"
+        # print(csv_header)
         f = open(csv_filename, "w")
         f.writelines(csv_header)
         f.close()
@@ -199,7 +159,7 @@ def usage_daily_product(usageClient, tenant_id, time_usage_started, time_usage_e
                     continue
                 row = "\"Oracle\",\"" + item.region + "\",\"" + item.compartment_path + "\",\"" + item.sku_part_number + " " + item.sku_name + "\",\"" + str(round(item.computed_amount, 2)) + "\"\n"
                 f.writelines(row)
-                print(row)
+                # print(row)
             else:
                 continue
 
